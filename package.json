@@ -9,6 +9,7 @@
   "scripts": {
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",
+    "start": "npm run start -w @dms/web",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
@@ -37,12 +38,6 @@
     "typescript-eslint": "^8.46.2"
   },
   "packageManager": "npm@11.6.2",
-  "dependencies": {
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.3",
-    "express": "^5.1.0",
-    "zod": "^4.1.12"
-  },
   "version": "1.0.0",
   "description": "",
   "main": "index.js",

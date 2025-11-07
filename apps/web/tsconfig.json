@@ -1,5 +1,5 @@
 {
-  "extends": "@dms/tsconfig/base.json",
+  "extends": "../../packages/tsconfig/base.json",
   "compilerOptions": {
     "jsx": "preserve",
     "allowJs": false,
@@ -8,6 +8,11 @@
     "incremental": true,
     "esModuleInterop": true,
     "isolatedModules": true,
+
+    "paths": {
+      "@/*": ["./*"]
+    },
+
     "plugins": [
       {
         "name": "next"

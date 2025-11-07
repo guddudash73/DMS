@@ -19,9 +19,19 @@ export default [
       '**/*.d.ts', // (optional) ignore ambient d.ts
     ],
     settings: {
+      react: { version: 'detect' },
       'import/resolver': {
         node: { extensions: ['.ts', '.tsx', '.d.ts', '.js', '.jsx'] },
-        typescript: { alwaysTryTypes: true },
+        // ✅ Point to each workspace tsconfig so ESLint resolves "@/*" (shadcn) and TS paths.
+        typescript: {
+          alwaysTryTypes: true,
+          project: [
+            'apps/*/tsconfig.json',
+            'packages/*/tsconfig.json',
+            // (optional) add infra/tools configs if they include TS
+            // 'infra/tsconfig.json'
+          ],
+        },
       },
     },
   },
@@ -36,13 +46,12 @@ export default [
     plugins: { '@next/next': next, react, 'react-hooks': reactHooks, import: importPlugin },
     settings: {
       next: { rootDir: ['apps/web'] },
-      // (resolver also applied globally above)
+      // (resolver is applied globally above)
     },
     rules: {
       ...next.configs['core-web-vitals'].rules,
       '@next/next/no-html-link-for-pages': 'off',
       'import/no-unresolved': ['error', { ignore: ['\\.css$'] }],
-      // optional: enforce *omitting* extensions for TS/JS imports
       'import/extensions': [
         'error',
         'ignorePackages',
@@ -54,14 +63,42 @@ export default [
     languageOptions: {
       parser: ts.parser,
       parserOptions: { ecmaVersion: 'latest', sourceType: 'module' },
+      globals: {
+        window: true,
+        document: true,
+        navigator: true,
+      },
     },
   },
 
-  // 3) Shared TS niceties for all packages
+  // 3) API (Node/Express)
+  {
+    files: ['apps/api/**/*.ts'],
+    plugins: { import: importPlugin },
+    rules: {
+      'import/no-unresolved': ['error', { ignore: ['\\.json$'] }],
+      'import/extensions': ['error', 'ignorePackages', { ts: 'never', js: 'never' }],
+    },
+    languageOptions: {
+      parser: ts.parser,
+      parserOptions: { ecmaVersion: 'latest', sourceType: 'module' },
+      globals: {
+        // Node globals
+        process: true,
+        __dirname: true,
+        module: true,
+        require: true,
+      },
+    },
+  },
+
+  // 4) Shared TS niceties for all packages
   {
     files: ['**/*.{ts,tsx}'],
     plugins: { import: importPlugin },
-    rules: { '@typescript-eslint/consistent-type-imports': 'error' },
+    rules: {
+      '@typescript-eslint/consistent-type-imports': 'error',
+    },
     languageOptions: {
       parser: ts.parser,
       parserOptions: { ecmaVersion: 'latest', sourceType: 'module' },

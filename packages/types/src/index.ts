@@ -6,3 +6,4 @@ export * from './xray.js';
 export * from './prescription.js';
 export * from './user.js';
 export * from './audit.js';
+export * from './auth.js';

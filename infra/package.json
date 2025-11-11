@@ -5,7 +5,7 @@
   "type": "module",
   "devDependencies": {
     "@types/node": "^22.19.0",
-    "sst": "^3.17.23",
+    "sst": "^3.9.28",
     "typescript": "^5.9.3"
   }
 }

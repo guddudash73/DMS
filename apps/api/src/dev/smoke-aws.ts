@@ -8,8 +8,8 @@ import {
   PutObjectCommand,
   GetObjectCommand,
 } from '@aws-sdk/client-s3';
-// import { fromIni } from '@aws-sdk/credential-providers'; // optional for real AWS; not used here
-import { AWS_REGION, DYNAMO_ENDPOINT, S3_ENDPOINT } from '../config/env.js';
+import { AWS_REGION, DYNAMO_ENDPOINT, S3_ENDPOINT } from '../config/env';
+import { log } from '../lib/logger';
 
 async function main() {
   // DynamoDB Local
@@ -30,11 +30,11 @@ async function main() {
 
   // DDB list tables (should succeed even without tables)
   const tables = await ddb.send(new ListTablesCommand({}));
-  console.log(JSON.stringify({ ddb: { tables } }, null, 2));
+  log('aws.smoke.ddb.listTables.ok', { tables });
 
-  // DDB put/get smoke (uses shared DB even if table pre-created later)
+  // DDB put/get smoke (table may not exist; treat as optional)
   const tableName = 'dev-smoke';
-  // Table creation is SST/CDK concern; for smoke, allow it to no-op gracefully
+
   try {
     await ddbDoc.send(
       new PutCommand({
@@ -42,26 +42,31 @@ async function main() {
         Item: { pk: 'HEALTH#1', sk: 'SMOKE#1', ts: Date.now() },
       }),
     );
+    log('aws.smoke.ddb.put.ok', { tableName });
   } catch (e) {
-    console.warn('Put skipped (table likely not created yet):', (e as Error).message);
+    log('aws.smoke.ddb.put.skip', { tableName, reason: (e as Error).message });
   }
 
   try {
     const got = await ddbDoc.send(
       new GetCommand({ TableName: tableName, Key: { pk: 'HEALTH#1', sk: 'SMOKE#1' } }),
     );
-    console.log(JSON.stringify({ ddbGet: got }, null, 2));
+    log('aws.smoke.ddb.get.ok', { tableName, item: got.Item ?? null });
   } catch (e) {
-    console.warn('Get skipped (table likely not created yet):', (e as Error).message);
+    log('aws.smoke.ddb.get.skip', { tableName, reason: (e as Error).message });
   }
 
   // S3 create bucket (idempotent)
   const Bucket = 'dms-dev-smoke';
   try {
     await s3.send(new CreateBucketCommand({ Bucket }));
+    log('aws.smoke.s3.createBucket.ok', { Bucket });
   } catch (e) {
     const msg = (e as Error).message || '';
-    if (!msg.includes('BucketAlreadyOwnedByYou') && !msg.includes('BucketAlreadyExists')) throw e;
+    if (!msg.includes('BucketAlreadyOwnedByYou') && !msg.includes('BucketAlreadyExists')) {
+      throw e;
+    }
+    log('aws.smoke.s3.createBucket.exists', { Bucket });
   }
 
   // S3 put/get
@@ -69,15 +74,19 @@ async function main() {
     new PutObjectCommand({ Bucket, Key: 'health.txt', Body: 'ok', ContentType: 'text/plain' }),
   );
   const obj = await s3.send(new GetObjectCommand({ Bucket, Key: 'health.txt' }));
-  console.log(JSON.stringify({ s3: { bucket: Bucket, gotContentType: obj.ContentType } }, null, 2));
+  log('aws.smoke.s3.getObject.ok', {
+    Bucket,
+    key: 'health.txt',
+    contentType: obj.ContentType ?? null,
+  });
 }
 
 main()
   .then(() => {
-    console.log(JSON.stringify({ smoke: 'aws', ok: true }, null, 2));
+    log('aws.smoke.done', { ok: true });
     process.exit(0);
   })
   .catch((err) => {
-    console.error(JSON.stringify({ smoke: 'aws', ok: false, err: String(err) }, null, 2));
+    log('aws.smoke.fail', { ok: false, err: String(err) });
     process.exit(1);
   });
